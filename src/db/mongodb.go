@@ -18,7 +18,7 @@ func GetMongoDB() MongoDB {
 	mongoDB := MongoDB{}
 	var err error
 	mongoDB.Ctx, mongoDB.Cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	mongoDB.Client, err = mongo.Connect(mongoDB.Ctx, options.Client().ApplyURI("mongodb://192.168.118.13:27017"))
+	mongoDB.Client, err = mongo.Connect(mongoDB.Ctx, options.Client().ApplyURI("mongodb://192.168.118.13:27017/"))
 
 	if err != nil {
 		log.Fatal(err)

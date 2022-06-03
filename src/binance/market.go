@@ -3,7 +3,9 @@ package binance
 import (
 	"A-Matrix/src/db"
 	"context"
+	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,7 +18,12 @@ import (
 
 func SubscribeMarket() {
 	c := dail()
-	defer c.Close()
+	defer func() {
+		err := c.Close() // we must close anyway
+		if err == nil {  // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
+			err = errors.Wrap(err, "close")
+		}
+	}()
 
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Cancel()
@@ -48,16 +55,19 @@ func SubscribeMarket() {
 		if err != nil {
 			log.Println("find:", err)
 		}
-		if resultBSON != nil {
+		println("Updated:", ticker["s"].(string))
+		if resultBSON != nil && resultBSON.Map()["arbitrage"] != nil && resultBSON.Map()["ticker"] != nil {
 			analyze(symbolCollection, mongoDB.Ctx, resultBSON)
 		}
 	}
 }
 
 func analyze(symbolCollection *mongo.Collection, ctx context.Context, symbolBSON bson.D) {
-	baseSymbol := symbolBSON.Map()["symbol"]
-	askPrice := symbolBSON.Map()["ticker"].(bson.D).Map()["ask"].(float32)
-	for _, relation := range symbolBSON.Map()["arbitrage_relation"].([]string) {
+	symbolBytes, _ := bson.MarshalExtJSON(symbolBSON, true, true)
+	symbolJSON := string(symbolBytes)
+	baseSymbol := gjson.Get(symbolJSON, "base").Str
+	askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()
+	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
 		filter := bson.M{
 			"exchange": "binance",
 			"symbol":   relation,
@@ -70,14 +80,16 @@ func analyze(symbolCollection *mongo.Collection, ctx context.Context, symbolBSON
 				continue
 			}
 		}
+		resultBytes, _ := bson.MarshalExtJSON(result, true, true)
+		resultJSON := string(resultBytes)
 		var mediumSymbol string
-		var mediumSellPrice, mediumBuyPrice float32
-		if baseSymbol == result.Map()["base"] {
-			mediumSellPrice = result.Map()["ticker"].(bson.D).Map()["bid"].(float32)
-			mediumSymbol = result.Map()["quote"].(string)
+		var mediumSellPrice, mediumBuyPrice float64
+		if baseSymbol == gjson.Get(resultJSON, "base").Str {
+			mediumSellPrice = gjson.Get(resultJSON, "ticker.bid").Float()
+			mediumSymbol = gjson.Get(resultJSON, "quote").Str
 		} else {
-			mediumBuyPrice = result.Map()["ticker"].(bson.D).Map()["ask"].(float32)
-			mediumSymbol = result.Map()["base"].(string)
+			mediumBuyPrice = gjson.Get(resultJSON, "ticker.ask").Float()
+			mediumSymbol = gjson.Get(resultJSON, "base").Str
 		}
 
 		var resultFinal bson.D
@@ -90,16 +102,20 @@ func analyze(symbolCollection *mongo.Collection, ctx context.Context, symbolBSON
 		if err := symbolCollection.FindOne(ctx, filterFinal).Decode(&resultFinal); err != nil {
 			if err == mongo.ErrNoDocuments {
 				continue
+			} else {
+				panic(err)
 			}
 		}
-		bidFinalPrice := resultFinal.Map()["ticker"].(bson.D).Map()["bid"].(float32)
-		var estimatedAmount float32
+		resultFinalBytes, _ := bson.MarshalExtJSON(resultFinal, true, true)
+		resultFinalJSON := string(resultFinalBytes)
+		bidFinalPrice := gjson.Get(resultFinalJSON, "ticker.bid").Float()
+		var estimatedAmount float64
 		if mediumSellPrice != 0 {
-			estimatedAmount = 10000 / askPrice / mediumSellPrice * bidFinalPrice
+			estimatedAmount = 10000 / askPrice * mediumSellPrice * bidFinalPrice
 		} else {
-			estimatedAmount = 10000 / askPrice * mediumBuyPrice * bidFinalPrice
+			estimatedAmount = 10000 / askPrice / mediumBuyPrice * bidFinalPrice
 		}
-		println(estimatedAmount)
+		println(fmt.Sprintf("%.2f", estimatedAmount/10000))
 	}
 }
 
