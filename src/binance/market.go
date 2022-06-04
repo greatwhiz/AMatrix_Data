@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+var commissionRate float64 = 0.001
+
 func SubscribeMarket() {
 	c := dail()
 	defer func() {
@@ -126,10 +128,10 @@ func analyze(symbolBSON bson.D) {
 		bidFinalPrice := gjson.Get(finalJSON, "ticker.bid").Float()
 		var estimatedAmount float64
 		if mediumSellPrice != 0 {
-			estimatedAmount = 10000 / askPrice * mediumSellPrice * bidFinalPrice
+			estimatedAmount = 10000 / askPrice * (1 - commissionRate) * mediumSellPrice * (1 - commissionRate) * bidFinalPrice * (1 - commissionRate)
 			println(fmt.Sprintf("%s(%.8f) %s(Sell %.8f) (%.8f): %.4f", baseSymbol, askPrice, mediumRelation, mediumSellPrice, bidFinalPrice, estimatedAmount/10000))
 		} else if mediumBuyPrice != 0 {
-			estimatedAmount = 10000 / askPrice / mediumBuyPrice * bidFinalPrice
+			estimatedAmount = 10000 / askPrice * (1 - commissionRate) / mediumBuyPrice * (1 - commissionRate) * bidFinalPrice * (1 - commissionRate)
 			println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) (%.8f): %.4f", baseSymbol, askPrice, mediumRelation, mediumBuyPrice, bidFinalPrice, estimatedAmount/10000))
 		}
 	}
