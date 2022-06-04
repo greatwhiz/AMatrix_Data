@@ -29,3 +29,15 @@ func GetMongoDB() MongoDB {
 func (m *MongoDB) GetCollection(key string) *mongo.Collection {
 	return m.Client.Database("a-matrix").Collection(key)
 }
+
+func (m *MongoDB) Close() {
+	if m.Client == nil {
+		return
+	}
+
+	err := m.Client.Disconnect(m.Ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.Client = nil
+}

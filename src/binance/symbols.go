@@ -4,6 +4,7 @@ import (
 	"A-Matrix/src/db"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -23,7 +24,12 @@ func UpdateSymbols() {
 		log.Fatal(err)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close() // we must close anyway
+		if err == nil {          // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
+			err = errors.Wrap(err, "close")
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 
@@ -32,7 +38,7 @@ func UpdateSymbols() {
 	}
 
 	mongoDB := db.GetMongoDB()
-	defer mongoDB.Cancel()
+	defer mongoDB.Close()
 	symbolCollection := mongoDB.GetCollection("symbols")
 
 	symbols := gjson.Get(string(body), "symbols")
@@ -66,7 +72,7 @@ func UpdateSymbols() {
 
 func UpdateArbitrageRelation() {
 	mongoDB := db.GetMongoDB()
-	defer mongoDB.Cancel()
+	defer mongoDB.Close()
 	symbolCollection := mongoDB.GetCollection("symbols")
 
 	filter := bson.M{
@@ -78,7 +84,12 @@ func UpdateArbitrageRelation() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cur.Close(mongoDB.Ctx)
+	defer func() {
+		err := cur.Close(mongoDB.Ctx) // we must close anyway
+		if err == nil {               // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
+			err = errors.Wrap(err, "close")
+		}
+	}()
 	for cur.Next(mongoDB.Ctx) {
 		var result bson.D
 		err := cur.Decode(&result)
