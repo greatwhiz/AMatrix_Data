@@ -8,40 +8,16 @@ import (
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"io/ioutil"
 	"log"
-	"net/http"
 )
 
 func UpdateSymbols() {
-	host := "https://api.binance.com/api/v3"
-
-	url := fmt.Sprintf("%s/%s", host, "exchangeInfo")
-
-	resp, err := http.Get(url)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer func() {
-		err := resp.Body.Close() // we must close anyway
-		if err == nil {          // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
-			err = errors.Wrap(err, "close")
-		}
-	}()
-
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
 	symbolCollection := mongoDB.GetCollection("symbols")
-
-	symbols := gjson.Get(string(body), "symbols")
+	content := GetAPI("exchangeInfo", nil)
+	symbols := gjson.Get(content, "symbols")
 	var symbolBSONs []interface{}
 	symbols.ForEach(func(key, symbol gjson.Result) bool {
 		var result bson.M
