@@ -30,7 +30,8 @@ func GetAPI(api string, params map[string]string) string {
 
 	defer func() {
 		err := resp.Body.Close() // we must close anyway
-		if err == nil {          // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
+		client.CloseIdleConnections()
+		if err == nil { // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
 			err = errors.Wrap(err, "close")
 		}
 	}()
