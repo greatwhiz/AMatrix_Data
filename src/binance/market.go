@@ -25,12 +25,21 @@ func SubscribeMarket() {
 	for {
 		_, content, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			log.Println("websocket read:", err)
 			// try to redial due to EOF error
 			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) {
 				c = dail()
 				continue
 			}
+		}
+		if content == nil {
+			log.Println("read: nil")
+			err = c.Close()
+			if err != nil {
+				log.Println("websocket close:", err)
+			}
+			c = dail()
+			continue
 		}
 		ticker := gjson.Parse(string(content)).Value().(map[string]interface{})
 		var resultBSON bson.D

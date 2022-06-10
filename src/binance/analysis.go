@@ -12,6 +12,7 @@ import (
 
 var commissionRate = 0.001
 var threshold = 1.01
+var blackList = map[string]bool{"HOTBNB": true, "PERLBNB": true, "SPELLBNB": true, "API3BNB": true, "TLMBNB": true}
 
 func Analyze(symbolBSON bson.D) {
 	symbolBytes, _ := bson.MarshalExtJSON(symbolBSON, true, true)
@@ -21,6 +22,9 @@ func Analyze(symbolBSON bson.D) {
 	askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()
 	done := make(chan int, 2)
 	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
+		if blackList[relation.(string)] {
+			continue
+		}
 		done <- -1
 		go doAnalysis(symbol, baseSymbol, relation, askPrice, done)
 	}
