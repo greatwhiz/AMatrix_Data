@@ -1,6 +1,9 @@
-package binance
+package binance_tests
 
-import "testing"
+import (
+	"A-Matrix/src/binance"
+	"testing"
+)
 
 func TestUpdateArbitrageRelation(t *testing.T) {
 	tests := []struct {
@@ -10,7 +13,7 @@ func TestUpdateArbitrageRelation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateArbitrageRelation()
+			binance.UpdateArbitrageRelation()
 		})
 	}
 }

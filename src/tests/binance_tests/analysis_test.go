@@ -1,6 +1,9 @@
-package binance
+package binance_tests
 
-import "testing"
+import (
+	"A-Matrix/src/binance"
+	"testing"
+)
 
 func TestDecide(t *testing.T) {
 	type args struct {
@@ -19,7 +22,7 @@ func TestDecide(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			Decide(tt.args.symbol, tt.args.mediumRelation, tt.args.finalSymbol, tt.args.mediumBuySell)
+			binance.Decide(tt.args.symbol, tt.args.mediumRelation, tt.args.finalSymbol, tt.args.mediumBuySell)
 		})
 	}
 }
