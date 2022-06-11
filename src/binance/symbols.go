@@ -22,8 +22,14 @@ func UpdateSymbols() {
 	symbols.ForEach(func(key, symbol gjson.Result) bool {
 		var result bson.M
 		value := symbol.Map()
-		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}}
-		err := symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}}).Decode(&result)
+
+		var filters bson.A
+		err := bson.UnmarshalExtJSON([]byte(symbol.Map()["filters"].Raw), true, &filters)
+		if err != nil {
+			log.Println("get filter: ", err)
+		}
+		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}, {"filters", filters}}
+		err = symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}}).Decode(&result)
 		if err != nil {
 			// ErrNoDocuments means that the filter did not match any documents in
 			//the collection.

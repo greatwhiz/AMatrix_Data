@@ -21,6 +21,7 @@ func TestOrderFull(t *testing.T) {
 			true,
 			"BTCUSDT",
 			29306.32,
+			1,
 		}}},
 	}
 	for _, tt := range tests {
