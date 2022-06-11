@@ -10,10 +10,6 @@ import (
 	"math"
 )
 
-var commissionRate = 0.001
-var threshold = 1.01
-var blackList = map[string]bool{"HOTBNB": true, "PERLBNB": true, "SPELLBNB": true, "API3BNB": true, "TLMBNB": true}
-
 func Analyze(symbolBSON bson.D) {
 	symbolBytes, _ := bson.MarshalExtJSON(symbolBSON, true, true)
 	symbolJSON := string(symbolBytes)

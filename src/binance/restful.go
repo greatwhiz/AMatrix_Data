@@ -1,6 +1,7 @@
 package binance
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,43 +10,36 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
 
-var apiKey = "crhlAbsbBAC9j9WAwyic8WFhUWSLP0TJIScir1ny5HxtTehq2G19sKE0tCFqho2s"
-var secretKey = "Ou7EtmQ5sfBMe2zV8Sm0sNuxihp5UyZVIYMWboRbpQ8FhTCwgqH0S6t5bV66Oc7Y"
-
 func GetAPI(api string, params map[string]string) string {
-	return getAPI(api, params, false)
+	return requestAPI(api, "GET", params, false)
 }
 
 func GetSignedAPI(api string, params map[string]string) string {
-	return getAPI(api, params, true)
+	return requestAPI(api, "GET", params, true)
 }
 
-func getAPI(api string, params map[string]string, isSign bool) string {
-	host := "https://api.binance.com/api/v3"
-	url := fmt.Sprintf("%s/%s", host, api)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		panic(err)
-	}
+func PostSignedAPI(api string, params map[string]string) string {
+	return requestAPI(api, "POST", params, true)
+}
 
-	q := req.URL.Query()
-	for k, v := range params {
-		q.Add(k, v)
+func requestAPI(api string, action string, params map[string]string, isSign bool) string {
+	host := "https://api.binance.com/api/v3"
+	requestUrl := fmt.Sprintf("%s/%s", host, api)
+	var req *http.Request
+	if action == "GET" {
+		req = getAPI(requestUrl, params, isSign)
+	} else if action == "POST" {
+		req = postAPI(requestUrl, params, isSign)
 	}
 
 	if isSign {
-		q.Add("recvWindow", "5000")
-		q.Add("timestamp", strconv.FormatInt(time.Now().UTC().UnixMilli(), 10))
-		signature := sign(q.Encode())
-		q.Add("signature", signature)
 		req.Header.Set("X-MBX-APIKEY", apiKey)
 	}
-
-	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -69,6 +63,39 @@ func getAPI(api string, params map[string]string, isSign bool) string {
 	}
 
 	return string(bodyBytes)
+}
+
+func getAPI(requestUrl string, params map[string]string, isSign bool) *http.Request {
+	req, err := http.NewRequest("GET", requestUrl, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.URL.RawQuery = getParams(params, isSign)
+	return req
+}
+
+func postAPI(requestUrl string, params map[string]string, isSign bool) *http.Request {
+	requestBody := getParams(params, isSign)
+	req, err := http.NewRequest("POST", requestUrl, bytes.NewBufferString(requestBody))
+	if err != nil {
+		panic(err)
+	}
+	return req
+}
+
+func getParams(params map[string]string, isSign bool) string {
+	q := url.Values{}
+	for k, v := range params {
+		q.Add(k, v)
+	}
+
+	if isSign {
+		q.Add("recvWindow", "5000")
+		q.Add("timestamp", strconv.FormatInt(time.Now().UTC().UnixMilli(), 10))
+		signature := sign(q.Encode())
+		q.Add("signature", signature)
+	}
+	return q.Encode()
 }
 
 func sign(data string) string {

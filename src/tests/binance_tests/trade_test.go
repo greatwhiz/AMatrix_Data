@@ -7,18 +7,26 @@ import (
 
 func TestOrderFull(t *testing.T) {
 	type args struct {
-		symbol     string
-		baseSymbol string
+		orderRelation binance.OrderRelation
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{"Test for doing orders", args{"ETH", "USDT"}},
+		{"Test for doing orders", args{binance.OrderRelation{
+			"BUSDUSDT",
+			1.0010,
+			"BTCBUSD",
+			29276.69,
+			true,
+			"BTCUSDT",
+			29306.32,
+		}}},
 	}
 	for _, tt := range tests {
+		binance.GetBalance("USDT")
 		t.Run(tt.name, func(t *testing.T) {
-			binance.OrderFull(tt.args.symbol, tt.args.baseSymbol)
+			binance.OrderFull(tt.args.orderRelation)
 		})
 	}
 }
