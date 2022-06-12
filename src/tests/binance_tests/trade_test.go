@@ -16,11 +16,16 @@ func TestOrderFull(t *testing.T) {
 		{"Test for doing orders", args{binance.OrderRelation{
 			"BUSDUSDT",
 			1.0010,
+			100,
+			1,
 			"BTCBUSD",
 			29276.69,
+			100,
+			1,
 			true,
 			"BTCUSDT",
 			29306.32,
+			100,
 			1,
 		}}},
 	}

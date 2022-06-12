@@ -64,11 +64,11 @@ func doAnalysis(symbol string, baseSymbol string, relation interface{}, askPrice
 	if baseSymbol == gjson.Get(mediumJSON, "base").Str {
 		mediumPrice = gjson.Get(mediumBook, "bids.0.0").Float()
 		mediumSymbol = gjson.Get(mediumJSON, "quote").Str
-		mediumBuySell = false
+		mediumBuySell = false // sell side
 	} else {
 		mediumPrice = gjson.Get(mediumBook, "asks.0.0").Float()
 		mediumSymbol = gjson.Get(mediumJSON, "base").Str
-		mediumBuySell = true
+		mediumBuySell = true // buy side
 	}
 
 	if mediumPrice == 0 {
@@ -135,9 +135,10 @@ func Decide(symbol string, mediumRelation string, finalSymbol string, mediumBuyS
 }
 
 func calculate(askPrice float64, mediumPrice float64, bidFinalPrice float64, commissionRate float64, mediumBuySell bool) (estimatedAmount float64) {
+	// buy sell
 	if mediumBuySell {
 		estimatedAmount = 10000 / askPrice * (1 - commissionRate) / mediumPrice * (1 - commissionRate) * bidFinalPrice * (1 - commissionRate) / 10000
-	} else {
+	} else { //sell side
 		estimatedAmount = 10000 / askPrice * (1 - commissionRate) * mediumPrice * (1 - commissionRate) * bidFinalPrice * (1 - commissionRate) / 10000
 	}
 	return estimatedAmount
