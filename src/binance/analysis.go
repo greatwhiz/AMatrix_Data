@@ -103,14 +103,12 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	finalBook := GetAPI("depth", map[string]string{"symbol": finalSymbol, "limit": "1"})
 	bidFinalPrice := gjson.Get(finalBook, "bids.0.0").Float()
 	estimatedAmount := calculate(askPrice, mediumPrice, bidFinalPrice, commissionRate, mediumBuySell)
-	if estimatedAmount > threshold && estimatedAmount != math.Inf(0) {
+	if estimatedAmount > arbitrageThreshold && estimatedAmount != math.Inf(0) {
 		if mediumBuySell {
 			log.Println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) (%.8f): %.4f", symbol, askPrice, mediumRelation, mediumPrice, bidFinalPrice, estimatedAmount))
 		} else {
 			log.Println(fmt.Sprintf("%s(%.8f) %s(Sell %.8f) (%.8f): %.4f", symbol, askPrice, mediumRelation, mediumPrice, bidFinalPrice, estimatedAmount))
 		}
-	}
-	if estimatedAmount > threshold {
 		baseAskQty := gjson.Get(symbolJSON, "ticker.ask_qty").Float()
 		baseLotSize := gjson.Get(symbolJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float()
 		mediumLotSize := gjson.Get(mediumJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float()
@@ -132,6 +130,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 			finalLotSize,
 		}
 		OrderFull(&orderRelation)
+		//log.Println(orderRelation)
 	}
 	<-done
 }

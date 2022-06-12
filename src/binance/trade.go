@@ -2,6 +2,7 @@ package binance
 
 import (
 	"github.com/tidwall/gjson"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -24,61 +25,76 @@ type OrderRelation struct {
 }
 
 func OrderFull(orderRelation *OrderRelation) {
-	baseQty := calculateOrderQuantity(orderRelation)
+	tradingAmount, baseQty := calculateOrderQuantity(orderRelation)
+	// skip when too small amount to trade
+	if tradingAmount < tradingAmountThreshold {
+		return
+	}
+	baseQty = getPreciseQuantity(baseQty, orderRelation.BaseLotSize)
 	var executedQty, mediumExecutedQty float64
 	executedQty = marketOrder(orderRelation.BaseSymbol, "BUY", baseQty)
+	mediumQty := getPreciseQuantity(executedQty, orderRelation.MediumLotSize)
 	if orderRelation.MediumSellBuy {
-		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "BUY", executedQty)
+		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "BUY", mediumQty)
 	} else {
-		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "SELL", executedQty)
+		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "SELL", mediumQty)
 	}
-	finalExecutedQty := marketOrder(orderRelation.MediumRelation, "SELL", mediumExecutedQty)
-	println(finalExecutedQty)
+	finalQty := getPreciseQuantity(mediumExecutedQty, orderRelation.FinalLotSize)
+	finalExecutedQty := marketOrder(orderRelation.MediumRelation, "SELL", finalQty)
+	println("Arbitrage completed: %.2f -> %.2f, %.2f", tradingAmount, finalExecutedQty, tradingAmount/finalExecutedQty)
 }
 
 func marketOrder(symbol string, side string, quantity float64) float64 {
-	baseOrder := map[string]string{
+	order := map[string]string{
 		"symbol":           symbol,
 		"side":             side,
 		"type":             "MARKET",
 		"quantity":         strconv.FormatFloat(quantity, 'f', -1, 64),
 		"newOrderRespType": "RESULT",
 	}
-	result := PostSignedAPI("order/test", baseOrder)
+	log.Print("Trade request: ", order)
+	result := PostSignedAPI("order/test", order)
 	executedQty := gjson.Get(result, "executedQty").Float()
+	log.Print("Trade result: ", result)
 	return executedQty
 }
 
-func calculateOrderQuantity(orderRelation *OrderRelation) (baseQty float64) {
-	baseBalance := AccountBalance[balanceSymbol]
-	tradingAmount := baseBalance * (1 - commissionRate) * leverage
+func calculateOrderQuantity(orderRelation *OrderRelation) (tradingAmount float64, baseQty float64) {
+	baseBalance := AccountBalance[fundamentalSymbol]
+	tradingAmount = baseBalance * (1 - commissionRate) * leverage
 	var mediumQty, finalQty float64
-	baseQty = baseBalance * (1 - commissionRate) * leverage / orderRelation.BaseAskPrice
-	baseQty = getPreciseQuantity(baseQty, orderRelation.BaseLotSize)
+	isLessTrading := false // if trading amount is less than order book
+	baseQty = tradingAmount / orderRelation.BaseAskPrice
+	// compare first quantity to order book
 	if baseQty > orderRelation.BaseAskQty {
 		baseQty = orderRelation.BaseAskQty
+		isLessTrading = true
 	}
 	if orderRelation.MediumSellBuy {
 		mediumQty = baseQty * (1 - commissionRate) / orderRelation.MediumPrice
-		mediumQty = getPreciseQuantity(mediumQty, orderRelation.MediumLotSize)
 	} else {
 		mediumQty = baseQty * (1 - commissionRate) * orderRelation.MediumPrice
-		mediumQty = getPreciseQuantity(mediumQty, orderRelation.MediumLotSize)
 	}
+	// compare medium quantity to order book
 	if mediumQty > orderRelation.MediumQty {
 		mediumQty = orderRelation.MediumQty
+		isLessTrading = true
 	}
-	finalQty = mediumQty * (1 - commissionRate) * orderRelation.FinalBid
-	finalQty = getPreciseQuantity(finalQty, orderRelation.FinalLotSize)
+	finalQty = mediumQty
+	// compare final quantity to order book
 	if finalQty > orderRelation.FinalQty {
 		finalQty = orderRelation.FinalQty
+		isLessTrading = true
 	}
-	finalTradedAmount := finalQty * orderRelation.FinalBid
-	if finalTradedAmount < tradingAmount {
-		baseQty = finalTradedAmount / orderRelation.BaseAskPrice
-		baseQty = getPreciseQuantity(baseQty, orderRelation.BaseLotSize)
+
+	finalTradingAmount := finalQty * (1 - commissionRate) * orderRelation.FinalBid
+	finalTradingAmount = finalTradingAmount / math.Pow(1-commissionRate, 3)
+
+	if isLessTrading {
+		baseQty = finalTradingAmount * (1 - commissionRate) / orderRelation.BaseAskPrice
+		tradingAmount = finalTradingAmount
 	}
-	return baseQty
+	return tradingAmount, baseQty
 }
 
 func getPreciseQuantity(quantity float64, lotSize float64) float64 {

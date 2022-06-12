@@ -32,7 +32,7 @@ func TestOrderFull(t *testing.T) {
 	for _, tt := range tests {
 		binance.GetBalance("USDT")
 		t.Run(tt.name, func(t *testing.T) {
-			binance.OrderFull(tt.args.orderRelation)
+			binance.OrderFull(&tt.args.orderRelation)
 		})
 	}
 }
