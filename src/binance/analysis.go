@@ -16,18 +16,18 @@ func Analyze(symbolBSON bson.D) {
 	symbol := gjson.Get(symbolJSON, "symbol").Str
 	baseSymbol := gjson.Get(symbolJSON, "base").Str
 	askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()
-	done := make(chan int, 2)
+	done := make(chan int, 1)
 	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
 		if blackList[relation.(string)] {
 			continue
 		}
 		done <- -1
-		go doAnalysis(symbol, baseSymbol, relation, askPrice, done)
+		go doAnalysis(symbol, baseSymbol, symbolJSON, relation, askPrice, done)
 	}
 	close(done)
 }
 
-func doAnalysis(symbol string, baseSymbol string, relation interface{}, askPrice float64, done chan int) {
+func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation interface{}, askPrice float64, done chan int) {
 	mongoDB := db.GetMongoDB()
 	symbolCollection := mongoDB.GetCollection("symbols")
 	filter := bson.M{
@@ -59,14 +59,16 @@ func doAnalysis(symbol string, baseSymbol string, relation interface{}, askPrice
 	mediumRelation := gjson.Get(mediumJSON, "symbol").Str
 	var mediumBuySell bool // true = Buy, false = Sell
 	var mediumSymbol string
-	var mediumPrice float64
+	var mediumPrice, mediumQty float64
 	mediumBook := GetAPI("depth", map[string]string{"symbol": mediumRelation, "limit": "1"})
 	if baseSymbol == gjson.Get(mediumJSON, "base").Str {
 		mediumPrice = gjson.Get(mediumBook, "bids.0.0").Float()
+		mediumQty = gjson.Get(mediumBook, "bids.0.1").Float()
 		mediumSymbol = gjson.Get(mediumJSON, "quote").Str
 		mediumBuySell = false // sell side
 	} else {
 		mediumPrice = gjson.Get(mediumBook, "asks.0.0").Float()
+		mediumQty = gjson.Get(mediumBook, "asks.0.1").Float()
 		mediumSymbol = gjson.Get(mediumJSON, "base").Str
 		mediumBuySell = true // buy side
 	}
@@ -108,30 +110,30 @@ func doAnalysis(symbol string, baseSymbol string, relation interface{}, askPrice
 			log.Println(fmt.Sprintf("%s(%.8f) %s(Sell %.8f) (%.8f): %.4f", symbol, askPrice, mediumRelation, mediumPrice, bidFinalPrice, estimatedAmount))
 		}
 	}
-	//if estimatedAmount > threshold {
-	//	Decide(symbol, mediumRelation, finalSymbol, mediumBuySell)
-	//}
-	<-done
-}
-
-func Decide(symbol string, mediumRelation string, finalSymbol string, mediumBuySell bool) {
-	startBook := GetAPI("depth", map[string]string{"symbol": symbol, "limit": "5"})
-	startAsk := gjson.Get(startBook, "asks.0.0").Float()
-	// startAskQty := gjson.Get(startBook, "asks.0.1").Float()
-	mediumBook := GetAPI("depth", map[string]string{"symbol": mediumRelation, "limit": "1"})
-	var mediumPrice float64 //, mediumQty float64
-	if mediumBuySell {
-		mediumPrice = gjson.Get(mediumBook, "asks.0.0").Float()
-		//mediumQty = gjson.Get(mediumBook, "asks.0.1").Float()
-	} else {
-		mediumPrice = gjson.Get(mediumBook, "bids.0.0").Float()
-		//mediumQty = gjson.Get(mediumBook, "bids.0.1").Float()
+	if estimatedAmount > threshold {
+		baseAskQty := gjson.Get(symbolJSON, "ticker.ask_qty").Float()
+		baseLotSize := gjson.Get(symbolJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float()
+		mediumLotSize := gjson.Get(mediumJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float()
+		bidFinalQty := gjson.Get(finalBook, "bids.0.1").Float()
+		finalLotSize := gjson.Get(finalJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float()
+		orderRelation := OrderRelation{
+			symbol,
+			askPrice,
+			baseAskQty,
+			baseLotSize,
+			mediumRelation,
+			mediumPrice,
+			mediumQty,
+			mediumLotSize,
+			mediumBuySell,
+			finalSymbol,
+			bidFinalPrice,
+			bidFinalQty,
+			finalLotSize,
+		}
+		OrderFull(&orderRelation)
 	}
-	finalBook := GetAPI("depth", map[string]string{"symbol": finalSymbol, "limit": "1"})
-	finalBid := gjson.Get(finalBook, "bids.0.0").Float()
-	//finalAskQty := gjson.Get(finalBook, "bids.0.1").Float()
-	estimatedAmount := calculate(startAsk, mediumPrice, finalBid, commissionRate, mediumBuySell)
-	println(fmt.Sprintf("%s(%.8f) %s(%.8f) (%.8f): %.4f", symbol, startAsk, mediumRelation, mediumPrice, finalBid, estimatedAmount))
+	<-done
 }
 
 func calculate(askPrice float64, mediumPrice float64, bidFinalPrice float64, commissionRate float64, mediumBuySell bool) (estimatedAmount float64) {

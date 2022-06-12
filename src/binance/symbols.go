@@ -12,7 +12,6 @@ import (
 )
 
 func UpdateSymbols() {
-
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
 	symbolCollection := mongoDB.GetCollection("symbols")

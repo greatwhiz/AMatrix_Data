@@ -23,7 +23,7 @@ type OrderRelation struct {
 	FinalLotSize   float64
 }
 
-func OrderFull(orderRelation OrderRelation) {
+func OrderFull(orderRelation *OrderRelation) {
 	baseQty := calculateOrderQuantity(orderRelation)
 	var executedQty, mediumExecutedQty float64
 	executedQty = marketOrder(orderRelation.BaseSymbol, "BUY", baseQty)
@@ -49,7 +49,7 @@ func marketOrder(symbol string, side string, quantity float64) float64 {
 	return executedQty
 }
 
-func calculateOrderQuantity(orderRelation OrderRelation) (baseQty float64) {
+func calculateOrderQuantity(orderRelation *OrderRelation) (baseQty float64) {
 	baseBalance := AccountBalance[balanceSymbol]
 	tradingAmount := baseBalance * (1 - commissionRate) * leverage
 	var mediumQty, finalQty float64
