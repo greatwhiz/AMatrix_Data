@@ -19,8 +19,8 @@ func init() {
 	blackList = map[string]bool{"HOTBNB": true, "PERLBNB": true, "SPELLBNB": true, "API3BNB": true, "TLMBNB": true}
 	apiKey = "crhlAbsbBAC9j9WAwyic8WFhUWSLP0TJIScir1ny5HxtTehq2G19sKE0tCFqho2s"
 	secretKey = "Ou7EtmQ5sfBMe2zV8Sm0sNuxihp5UyZVIYMWboRbpQ8FhTCwgqH0S6t5bV66Oc7Y"
-	leverage = .95
-	tradeNumLimit = 0 // >0 normal limit, =0 off trading, =-1 unlimited
+	leverage = .98
+	tradeNumLimit = 3 // >0 normal limit, =0 off trading, =-1 unlimited
 
 	GetBalance(fundamentalSymbol)
 }
