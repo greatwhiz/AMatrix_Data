@@ -1,6 +1,7 @@
 package binance
 
 import (
+	"fmt"
 	"github.com/tidwall/gjson"
 	"log"
 	"math"
@@ -25,23 +26,37 @@ type OrderRelation struct {
 }
 
 func OrderFull(orderRelation *OrderRelation) {
+	// when hit num limit
+	if tradeNumLimit != -1 && tradeCount >= tradeNumLimit {
+		log.Println("Trade Num Limited reached.")
+		return
+	}
+	startBalance := AccountBalance[fundamentalSymbol]
 	tradingAmount, baseQty := calculateOrderQuantity(orderRelation)
 	// skip when too small amount to trade
 	if tradingAmount < tradingAmountThreshold {
 		return
 	}
 	baseQty = getPreciseQuantity(baseQty, orderRelation.BaseLotSize)
-	var executedQty, mediumExecutedQty float64
+	var executedQty, mediumQty, mediumExecutedQty float64
 	executedQty = marketOrder(orderRelation.BaseSymbol, "BUY", baseQty)
-	mediumQty := getPreciseQuantity(executedQty, orderRelation.MediumLotSize)
+	action := ""
 	if orderRelation.MediumSellBuy {
-		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "BUY", mediumQty)
+		action = "BUY"
+		mediumQty = executedQty * (1 - commissionRate) / orderRelation.MediumPrice
 	} else {
-		mediumExecutedQty = marketOrder(orderRelation.MediumRelation, "SELL", mediumQty)
+		action = "SELL"
+		mediumQty = executedQty * (1 - commissionRate) * orderRelation.MediumPrice
 	}
-	finalQty := getPreciseQuantity(mediumExecutedQty, orderRelation.FinalLotSize)
-	finalExecutedQty := marketOrder(orderRelation.MediumRelation, "SELL", finalQty)
-	println("Arbitrage completed: %.2f -> %.2f, %.2f", tradingAmount, finalExecutedQty, tradingAmount/finalExecutedQty)
+
+	mediumQty = getPreciseQuantity(mediumQty, orderRelation.MediumLotSize)
+	mediumExecutedQty = marketOrder(orderRelation.MediumRelation, action, mediumQty)
+	finalQty := getPreciseQuantity(mediumExecutedQty*(1-commissionRate), orderRelation.FinalLotSize)
+	finalExecutedQty := marketOrder(orderRelation.FinalSymbol, "SELL", finalQty)
+	GetBalance(fundamentalSymbol)
+	endBalance := AccountBalance[fundamentalSymbol]
+	log.Println(fmt.Sprintf("Arbitrage completed: (%.4f) %.8f -> %.8f, %.2f", finalExecutedQty, startBalance, endBalance, startBalance/endBalance))
+	tradeCount += 1 // Count one trade
 }
 
 func marketOrder(symbol string, side string, quantity float64) float64 {
@@ -53,7 +68,7 @@ func marketOrder(symbol string, side string, quantity float64) float64 {
 		"newOrderRespType": "RESULT",
 	}
 	log.Print("Trade request: ", order)
-	result := PostSignedAPI("order/test", order)
+	result := PostSignedAPI("order", order)
 	executedQty := gjson.Get(result, "executedQty").Float()
 	log.Print("Trade result: ", result)
 	return executedQty
@@ -61,7 +76,7 @@ func marketOrder(symbol string, side string, quantity float64) float64 {
 
 func calculateOrderQuantity(orderRelation *OrderRelation) (tradingAmount float64, baseQty float64) {
 	baseBalance := AccountBalance[fundamentalSymbol]
-	tradingAmount = baseBalance * (1 - commissionRate) * leverage
+	tradingAmount = baseBalance * leverage
 	var mediumQty, finalQty float64
 	isLessTrading := false // if trading amount is less than order book
 	baseQty = tradingAmount / orderRelation.BaseAskPrice
@@ -70,6 +85,7 @@ func calculateOrderQuantity(orderRelation *OrderRelation) (tradingAmount float64
 		baseQty = orderRelation.BaseAskQty
 		isLessTrading = true
 	}
+	mediumQty = baseQty * (1 - commissionRate) // add commission for the init trading
 	if orderRelation.MediumSellBuy {
 		mediumQty = baseQty * (1 - commissionRate) / orderRelation.MediumPrice
 	} else {
