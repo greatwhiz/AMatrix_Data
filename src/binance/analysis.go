@@ -15,7 +15,10 @@ func Analyze(symbolBSON bson.D) {
 	symbolJSON := string(symbolBytes)
 	symbol := gjson.Get(symbolJSON, "symbol").Str
 	baseSymbol := gjson.Get(symbolJSON, "base").Str
-	askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()
+	//askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()    // TO-DO: the book from websocket not accurate
+	book := GetAPI("depth", map[string]string{"symbol": symbol, "limit": "1"})
+	askPrice := gjson.Get(book, "asks.0.0").Float()
+	//log.Println(symbol, " ", askPrice, " ", price)
 	done := make(chan int, 1)
 	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
 		if blackList[relation.(string)] {
