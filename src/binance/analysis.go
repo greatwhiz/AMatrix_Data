@@ -16,21 +16,18 @@ func Analyze(symbolBSON bson.D) {
 	symbol := gjson.Get(symbolJSON, "symbol").Str
 	baseSymbol := gjson.Get(symbolJSON, "base").Str
 	//askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()    // TO-DO: the book from websocket not accurate
-	book := GetAPI("depth", map[string]string{"symbol": symbol, "limit": "1"})
-	askPrice := gjson.Get(book, "asks.0.0").Float()
-	//log.Println(symbol, " ", askPrice, " ", price)
 	done := make(chan int, 1)
 	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
 		if blackList[relation.(string)] {
 			continue
 		}
 		done <- -1
-		go doAnalysis(symbol, baseSymbol, symbolJSON, relation, askPrice, done)
+		go doAnalysis(symbol, baseSymbol, symbolJSON, relation, done)
 	}
 	close(done)
 }
 
-func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation interface{}, askPrice float64, done chan int) {
+func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation interface{}, done chan int) {
 	mongoDB := db.GetMongoDB()
 	symbolCollection := mongoDB.GetCollection("symbols")
 	filter := bson.M{
@@ -56,7 +53,9 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 		<-done
 		return
 	}
-
+	//get base ask price
+	book := GetAPI("depth", map[string]string{"symbol": symbol, "limit": "1"})
+	askPrice := gjson.Get(book, "asks.0.0").Float()
 	mediumBytes, _ := bson.MarshalExtJSON(medium, true, true)
 	mediumJSON := string(mediumBytes)
 	mediumRelation := gjson.Get(mediumJSON, "symbol").Str
