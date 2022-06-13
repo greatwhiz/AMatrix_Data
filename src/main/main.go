@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 func init() {
@@ -22,12 +21,12 @@ func main() {
 }
 
 func setLog() {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("No caller information")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
 	}
-	dir := filepath.Dir(filename)
-	f, err := os.OpenFile(fmt.Sprintf("%s/../../tmp/log.txt", dir), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	exPath := filepath.Dir(ex)
+	f, err := os.OpenFile(fmt.Sprintf("%s/tmp/log.txt", exPath), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
