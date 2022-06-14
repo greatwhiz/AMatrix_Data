@@ -58,7 +58,7 @@ func SubscribeMarket() {
 			},
 		}).Decode(&resultBSON)
 		if err != nil {
-			log.Println("find:", err)
+			log.Println(ticker["s"], " find: ", err)
 		}
 		//println("Updated:", ticker["s"].(string))
 		mongoDB.Close()

@@ -92,10 +92,12 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 		mongoDB.Close()
 		if err == mongo.ErrNoDocuments {
 			<-done
+			log.Println(mediumSymbol, ": ", err)
 			return
 		} else {
-			println("arbit final: ")
-			panic(err)
+			<-done
+			log.Println("arbit final: ", err)
+			return
 		}
 	}
 	mongoDB.Close()
