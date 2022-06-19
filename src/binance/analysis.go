@@ -29,6 +29,8 @@ func Analyze(symbolBSON bson.D) {
 
 func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation interface{}, done chan int) {
 	mongoDB := db.GetMongoDB()
+	defer mongoDB.Close()
+
 	symbolCollection := mongoDB.GetCollection("symbols")
 	filter := bson.M{
 		"exchange": "binance",
@@ -38,7 +40,6 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	var medium bson.D
 	// check for errors in the finding
 	if err := symbolCollection.FindOne(mongoDB.Ctx, filter).Decode(&medium); err != nil {
-		mongoDB.Close()
 		if err == mongo.ErrNoDocuments {
 			<-done
 			return
@@ -49,7 +50,6 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	}
 
 	if medium.Map()["ticker"] == nil {
-		mongoDB.Close()
 		<-done
 		return
 	}
@@ -76,7 +76,6 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	}
 
 	if mediumPrice == 0 {
-		mongoDB.Close()
 		log.Println(fmt.Sprintf("%s unable get book: %s", mediumRelation, mediumBook))
 		<-done
 		return
@@ -90,7 +89,6 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	}
 
 	if err := symbolCollection.FindOne(mongoDB.Ctx, filterFinal).Decode(&final); err != nil {
-		mongoDB.Close()
 		if err == mongo.ErrNoDocuments {
 			log.Println(mediumSymbol, ": ", err)
 		} else {
@@ -99,7 +97,6 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 		<-done
 		return
 	}
-	mongoDB.Close()
 	finalBytes, _ := bson.MarshalExtJSON(final, true, true)
 	finalJSON := string(finalBytes)
 	finalSymbol := gjson.Get(finalJSON, "symbol").Str
