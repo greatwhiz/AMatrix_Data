@@ -89,7 +89,12 @@ func dail() *websocket.Conn {
 	}
 	_, content, err := c.ReadMessage()
 	if err != nil {
-		log.Fatal("read:", err)
+		log.Println("read:", err)
+		err := c.Close() // we must close anyway
+		if err == nil {  // we must not overwrite the actual error if it is happened, and we did all the best to cleanup anyway
+			err = errors.Wrap(err, "close")
+		}
+		return dail()
 	}
 	println(string(content))
 	return c

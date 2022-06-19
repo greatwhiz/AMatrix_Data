@@ -16,7 +16,7 @@ func Analyze(symbolBSON bson.D) {
 	symbol := gjson.Get(symbolJSON, "symbol").Str
 	baseSymbol := gjson.Get(symbolJSON, "base").Str
 	//askPrice := gjson.Get(symbolJSON, "ticker.ask").Float()    // TO-DO: the book from websocket not accurate
-	done := make(chan int, 1)
+	done := make(chan int, analyzingConcurrency)
 	for _, relation := range symbolBSON.Map()["arbitrage"].(bson.A) {
 		if blackList[relation.(string)] {
 			continue
@@ -43,8 +43,8 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 			<-done
 			return
 		} else {
-			println("arbitrate medium: ")
-			panic(err)
+			log.Println("arbitrate medium: ", err)
+			doAnalysis(symbol, baseSymbol, symbolJSON, relation, done)
 		}
 	}
 
@@ -76,6 +76,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	}
 
 	if mediumPrice == 0 {
+		mongoDB.Close()
 		log.Println(fmt.Sprintf("%s unable get book: %s", mediumRelation, mediumBook))
 		<-done
 		return
@@ -91,14 +92,12 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	if err := symbolCollection.FindOne(mongoDB.Ctx, filterFinal).Decode(&final); err != nil {
 		mongoDB.Close()
 		if err == mongo.ErrNoDocuments {
-			<-done
 			log.Println(mediumSymbol, ": ", err)
-			return
 		} else {
-			<-done
 			log.Println("arbit final: ", err)
-			return
 		}
+		<-done
+		return
 	}
 	mongoDB.Close()
 	finalBytes, _ := bson.MarshalExtJSON(final, true, true)

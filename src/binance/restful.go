@@ -45,7 +45,8 @@ func requestAPI(api string, action string, params map[string]string, isSign bool
 	resp, err := client.Do(req)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err, "Retry once.")
+		return requestAPI(api, action, params, isSign)
 	}
 
 	defer func() {
@@ -59,7 +60,8 @@ func requestAPI(api string, action string, params map[string]string, isSign bool
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err, "Retry once.")
+		return requestAPI(api, action, params, isSign)
 	}
 
 	return string(bodyBytes)
