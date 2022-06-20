@@ -83,7 +83,7 @@ func UpdateArbitrageRelation() {
 			"exchange": "binance",
 			"$or": bson.A{
 				bson.M{"quote": baseSymbol},
-				bson.M{"baseSymbol": baseSymbol},
+				bson.M{"base": baseSymbol},
 			},
 		}
 		curMedium, err := symbolCollection.Find(mongoDB.Ctx, filterMedium)
