@@ -1,5 +1,6 @@
 package binance
 
+var websocketAddress, restAPIHost string
 var fundamentalSymbol string
 var AccountBalance map[string]float64
 var commissionRate float64
@@ -11,6 +12,8 @@ var leverage float64
 var tradeNumLimit, tradeCount, analyzingConcurrency int
 
 func init() {
+	websocketAddress = "stream.binance.com:9443"
+	restAPIHost = "https://api.binance.com/api/v3"
 	fundamentalSymbol = "USDT"
 	AccountBalance = map[string]float64{}
 	commissionRate = 0.001

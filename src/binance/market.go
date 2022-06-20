@@ -69,7 +69,7 @@ func SubscribeMarket() {
 }
 
 func dail() *websocket.Conn {
-	addr := "stream.binance.com:9443"
+	addr := websocketAddress
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)

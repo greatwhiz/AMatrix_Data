@@ -28,7 +28,7 @@ func PostSignedAPI(api string, params map[string]string) string {
 }
 
 func requestAPI(api string, action string, params map[string]string, isSign bool) string {
-	host := "https://api.binance.com/api/v3"
+	host := restAPIHost
 	requestUrl := fmt.Sprintf("%s/%s", host, api)
 	var req *http.Request
 	if action == "GET" {
