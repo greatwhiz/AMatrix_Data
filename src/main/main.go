@@ -1,7 +1,7 @@
 package main
 
 import (
-	"A-Matrix/src/binance_v1"
+	"A-Matrix/src/binance_v2"
 	"fmt"
 	"github.com/pkg/errors"
 	"io"
@@ -15,9 +15,9 @@ func init() {
 }
 
 func main() {
-	binance_v1.UpdateSymbols()
-	binance_v1.UpdateArbitrageRelation()
-	binance_v1.SubscribeMarket()
+	binance_v2.UpdateSymbols()
+	binance_v2.UpdateArbitrageRelation()
+	binance_v2.SubscribeSymbols()
 }
 
 func setLog() {

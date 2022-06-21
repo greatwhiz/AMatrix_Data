@@ -1,4 +1,4 @@
-package binance_v1
+package binance_v2
 
 var websocketAddress, restAPIHost string
 var fundamentalSymbol string

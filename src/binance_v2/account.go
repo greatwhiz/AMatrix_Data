@@ -1,4 +1,4 @@
-package binance_v1
+package binance_v2
 
 import (
 	"fmt"

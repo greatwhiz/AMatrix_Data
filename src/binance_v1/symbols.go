@@ -57,8 +57,8 @@ func UpdateArbitrageRelation() {
 	symbolCollection := mongoDB.GetCollection("symbols")
 
 	filter := bson.M{
-		"quote":    "USDT",
-		"exchange": "binance_v1",
+		"quote":    fundamentalSymbol,
+		"exchange": "binance",
 	}
 
 	cur, err := symbolCollection.Find(mongoDB.Ctx, filter)
@@ -80,7 +80,7 @@ func UpdateArbitrageRelation() {
 		resultMap := result.Map()
 		baseSymbol := resultMap["base"].(string)
 		filterMedium := bson.M{
-			"exchange": "binance_v1",
+			"exchange": "binance",
 			"$or": bson.A{
 				bson.M{"quote": baseSymbol},
 				bson.M{"base": baseSymbol},
@@ -96,7 +96,7 @@ func UpdateArbitrageRelation() {
 			}
 			resultMediumMap := resultMedium.Map()
 			baseMediumSymbol := ""
-			if resultMediumMap["quote"].(string) != "USDT" && resultMediumMap["base"].(string) != "USDT" {
+			if resultMediumMap["quote"].(string) != fundamentalSymbol && resultMediumMap["base"].(string) != fundamentalSymbol {
 				if baseSymbol == resultMediumMap["base"].(string) {
 					baseMediumSymbol = resultMediumMap["quote"].(string)
 				} else {
@@ -107,8 +107,8 @@ func UpdateArbitrageRelation() {
 			}
 
 			filterFinal := bson.M{
-				"exchange": "binance_v1",
-				"quote":    "USDT",
+				"exchange": "binance",
+				"quote":    fundamentalSymbol,
 				"base":     baseMediumSymbol,
 			}
 

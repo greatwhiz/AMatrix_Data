@@ -1,4 +1,4 @@
-package binance_v1
+package binance_v2
 
 import (
 	"A-Matrix/src/db"
@@ -27,8 +27,8 @@ func UpdateSymbols() {
 		if err != nil {
 			log.Println("get filter: ", err)
 		}
-		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance_v1"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}, {"filters", filters}}
-		err = symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance_v1"}}).Decode(&result)
+		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}, {"filters", filters}}
+		err = symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}}).Decode(&result)
 		if err != nil {
 			// ErrNoDocuments means that the filter did not match any documents in
 			//the collection.
@@ -53,12 +53,11 @@ func UpdateSymbols() {
 
 func UpdateArbitrageRelation() {
 	mongoDB := db.GetMongoDB()
-	defer mongoDB.Close()
 	symbolCollection := mongoDB.GetCollection("symbols")
 
 	filter := bson.M{
-		"quote":    "USDT",
-		"exchange": "binance_v1",
+		"quote":    fundamentalSymbol,
+		"exchange": "binance",
 	}
 
 	cur, err := symbolCollection.Find(mongoDB.Ctx, filter)
@@ -71,69 +70,83 @@ func UpdateArbitrageRelation() {
 			err = errors.Wrap(err, "close")
 		}
 	}()
-	for cur.Next(mongoDB.Ctx) {
-		var result bson.D
-		err := cur.Decode(&result)
-		if err != nil {
-			log.Fatal(err)
-		}
-		resultMap := result.Map()
+	var res []interface{}
+	err = cur.All(mongoDB.Ctx, &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mongoDB.Close()
+
+	for _, result := range res {
+		resultMap := result.(bson.D).Map()
 		baseSymbol := resultMap["base"].(string)
 		filterMedium := bson.M{
-			"exchange": "binance_v1",
+			"exchange": "binance",
 			"$or": bson.A{
 				bson.M{"quote": baseSymbol},
 				bson.M{"base": baseSymbol},
 			},
 		}
+		mongoDB = db.GetMongoDB()
+		symbolCollection = mongoDB.GetCollection("symbols")
 		curMedium, err := symbolCollection.Find(mongoDB.Ctx, filterMedium)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var resMedium []interface{}
+		err = curMedium.All(mongoDB.Ctx, &resMedium)
+		if err != nil {
+			log.Fatal(err)
+		}
+		mongoDB.Close()
 		var resultMediums []interface{}
-		for curMedium.Next(mongoDB.Ctx) {
-			var resultMedium bson.D
-			err := curMedium.Decode(&resultMedium)
-			if err != nil {
-				log.Fatal(err)
-			}
-			resultMediumMap := resultMedium.Map()
+		for _, resultMedium := range resMedium {
+			resultMediumMap := resultMedium.(bson.D).Map()
 			baseMediumSymbol := ""
-			if resultMediumMap["quote"].(string) != "USDT" && resultMediumMap["base"].(string) != "USDT" {
+			var isBuyOrSell bool // true = Buy, false = Sell
+			if resultMediumMap["quote"].(string) != fundamentalSymbol && resultMediumMap["base"].(string) != fundamentalSymbol {
 				if baseSymbol == resultMediumMap["base"].(string) {
 					baseMediumSymbol = resultMediumMap["quote"].(string)
+					isBuyOrSell = false // sell base
 				} else {
 					baseMediumSymbol = resultMediumMap["base"].(string)
+					isBuyOrSell = true //buy medium
 				}
 			} else {
 				continue
 			}
 
 			filterFinal := bson.M{
-				"exchange": "binance_v1",
-				"quote":    "USDT",
+				"exchange": "binance",
+				"quote":    fundamentalSymbol,
 				"base":     baseMediumSymbol,
 			}
 
 			var resultFinal bson.M
 			// check for errors in the finding
+			mongoDB = db.GetMongoDB()
+			symbolCollection = mongoDB.GetCollection("symbols")
 			if err = symbolCollection.FindOne(mongoDB.Ctx, filterFinal).Decode(&resultFinal); err != nil {
+				mongoDB.Close()
 				if err == mongo.ErrNoDocuments {
 					continue
 				}
 			}
-
-			resultMediums = append(resultMediums, bson.M{"symbol": resultMediumMap["symbol"], "base": resultMediumMap["base"], "quote": resultMediumMap["quote"]})
+			mongoDB.Close()
+			resultMediums = append(resultMediums, bson.M{"symbol": resultMediumMap["symbol"], "base": resultMediumMap["base"], "quote": resultMediumMap["quote"], "buy_or_sell": isBuyOrSell, "filters": resultMediumMap["filters"], "final_filters": resultFinal["filters"]})
 		}
-
-		_, err = symbolCollection.UpdateByID(mongoDB.Ctx, result[0].Value, bson.D{
+		mongoDB = db.GetMongoDB()
+		symbolCollection = mongoDB.GetCollection("symbols")
+		_, err = symbolCollection.UpdateByID(mongoDB.Ctx, resultMap["_id"], bson.D{
 			{"$set", bson.D{
 				{"arbitrage", resultMediums},
 			},
 			},
 		})
+		mongoDB.Close()
+
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-	if err := cur.Err(); err != nil {
-		log.Fatal(err)
 	}
 }

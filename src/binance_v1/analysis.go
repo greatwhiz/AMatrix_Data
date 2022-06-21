@@ -33,7 +33,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 
 	symbolCollection := mongoDB.GetCollection("symbols")
 	filter := bson.M{
-		"exchange": "binance_v1",
+		"exchange": "binance",
 		"symbol":   relation,
 	}
 
@@ -83,9 +83,9 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 
 	var final bson.D
 	filterFinal := bson.M{
-		"exchange": "binance_v1",
+		"exchange": "binance",
 		"base":     mediumSymbol,
-		"quote":    "USDT",
+		"quote":    fundamentalSymbol,
 	}
 
 	if err := symbolCollection.FindOne(mongoDB.Ctx, filterFinal).Decode(&final); err != nil {

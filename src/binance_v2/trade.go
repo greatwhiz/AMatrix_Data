@@ -1,6 +1,7 @@
-package binance_v1
+package binance_v2
 
 import (
+	"A-Matrix/src/models"
 	"fmt"
 	"github.com/tidwall/gjson"
 	"log"
@@ -9,23 +10,7 @@ import (
 	"strings"
 )
 
-type OrderRelation struct {
-	BaseSymbol     string
-	BaseAskPrice   float64
-	BaseAskQty     float64
-	BaseLotSize    float64
-	MediumRelation string
-	MediumPrice    float64
-	MediumQty      float64
-	MediumLotSize  float64
-	MediumSellBuy  bool
-	FinalSymbol    string
-	FinalBid       float64
-	FinalQty       float64
-	FinalLotSize   float64
-}
-
-func OrderFull(orderRelation *OrderRelation) {
+func OrderFull(orderRelation *models.OrderRelation) {
 	// when hit num limit
 	if tradeNumLimit != -1 && tradeCount >= tradeNumLimit {
 		log.Println("Trade Num Limited reached.")
@@ -74,7 +59,7 @@ func marketOrder(symbol string, side string, quantity float64) float64 {
 	return executedQty
 }
 
-func calculateOrderQuantity(orderRelation *OrderRelation) (tradingAmount float64, baseQty float64) {
+func calculateOrderQuantity(orderRelation *models.OrderRelation) (tradingAmount float64, baseQty float64) {
 	baseBalance := AccountBalance[fundamentalSymbol]
 	tradingAmount = baseBalance * leverage
 	var mediumQty, finalQty float64
