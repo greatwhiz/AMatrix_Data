@@ -1,4 +1,4 @@
-package binance
+package binance_v1
 
 import (
 	"A-Matrix/src/db"
@@ -33,7 +33,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 
 	symbolCollection := mongoDB.GetCollection("symbols")
 	filter := bson.M{
-		"exchange": "binance",
+		"exchange": "binance_v1",
 		"symbol":   relation,
 	}
 
@@ -83,7 +83,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 
 	var final bson.D
 	filterFinal := bson.M{
-		"exchange": "binance",
+		"exchange": "binance_v1",
 		"base":     mediumSymbol,
 		"quote":    "USDT",
 	}

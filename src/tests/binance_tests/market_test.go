@@ -1,7 +1,7 @@
 package binance_tests
 
 import (
-	"A-Matrix/src/binance"
+	"A-Matrix/src/binance_v1"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func TestSubscribeMarket(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			binance.SubscribeMarket()
+			binance_v1.SubscribeMarket()
 		})
 	}
 }

@@ -1,4 +1,4 @@
-package binance
+package binance_v1
 
 var websocketAddress, restAPIHost string
 var fundamentalSymbol string
@@ -12,7 +12,7 @@ var leverage float64
 var tradeNumLimit, tradeCount, analyzingConcurrency int
 
 func init() {
-	websocketAddress = "stream.binance.com:9443"
+	websocketAddress = "stream.binance_v1.com:9443"
 	restAPIHost = "https://api.binance.com/api/v3"
 	fundamentalSymbol = "USDT"
 	AccountBalance = map[string]float64{}

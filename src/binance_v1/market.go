@@ -1,4 +1,4 @@
-package binance
+package binance_v1
 
 import (
 	"A-Matrix/src/db"
@@ -45,7 +45,7 @@ func SubscribeMarket() {
 		var resultBSON bson.D
 		mongoDB := db.GetMongoDB()
 		symbolCollection := mongoDB.GetCollection("symbols")
-		err = symbolCollection.FindOneAndUpdate(mongoDB.Ctx, bson.M{"symbol": ticker["s"], "exchange": "binance"}, bson.D{
+		err = symbolCollection.FindOneAndUpdate(mongoDB.Ctx, bson.M{"symbol": ticker["s"], "exchange": "binance_v1"}, bson.D{
 			{"$set", bson.D{
 				{"ticker", bson.D{
 					{"bid", ticker["b"]},

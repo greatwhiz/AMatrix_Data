@@ -1,4 +1,4 @@
-package binance
+package binance_v1
 
 import (
 	"bytes"

@@ -1,19 +1,19 @@
 package binance_tests
 
 import (
-	"A-Matrix/src/binance"
+	"A-Matrix/src/binance_v1"
 	"testing"
 )
 
 func TestOrderFull(t *testing.T) {
 	type args struct {
-		orderRelation binance.OrderRelation
+		orderRelation binance_v1.OrderRelation
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{"Test for doing orders", args{binance.OrderRelation{
+		{"Test for doing orders", args{binance_v1.OrderRelation{
 			"BUSDUSDT",
 			1.0010,
 			100,
@@ -30,9 +30,9 @@ func TestOrderFull(t *testing.T) {
 		}}},
 	}
 	for _, tt := range tests {
-		binance.GetBalance("USDT")
+		binance_v1.GetBalance("USDT")
 		t.Run(tt.name, func(t *testing.T) {
-			binance.OrderFull(&tt.args.orderRelation)
+			binance_v1.OrderFull(&tt.args.orderRelation)
 		})
 	}
 }

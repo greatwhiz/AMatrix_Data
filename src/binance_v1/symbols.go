@@ -1,4 +1,4 @@
-package binance
+package binance_v1
 
 import (
 	"A-Matrix/src/db"
@@ -27,8 +27,8 @@ func UpdateSymbols() {
 		if err != nil {
 			log.Println("get filter: ", err)
 		}
-		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}, {"filters", filters}}
-		err = symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance"}}).Decode(&result)
+		symbolBSON := bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance_v1"}, {"base", value["baseAsset"].String()}, {"quote", value["quoteAsset"].String()}, {"filters", filters}}
+		err = symbolCollection.FindOne(context.TODO(), bson.D{{"symbol", value["symbol"].String()}, {"exchange", "binance_v1"}}).Decode(&result)
 		if err != nil {
 			// ErrNoDocuments means that the filter did not match any documents in
 			//the collection.
@@ -58,7 +58,7 @@ func UpdateArbitrageRelation() {
 
 	filter := bson.M{
 		"quote":    "USDT",
-		"exchange": "binance",
+		"exchange": "binance_v1",
 	}
 
 	cur, err := symbolCollection.Find(mongoDB.Ctx, filter)
@@ -80,7 +80,7 @@ func UpdateArbitrageRelation() {
 		resultMap := result.Map()
 		baseSymbol := resultMap["base"].(string)
 		filterMedium := bson.M{
-			"exchange": "binance",
+			"exchange": "binance_v1",
 			"$or": bson.A{
 				bson.M{"quote": baseSymbol},
 				bson.M{"base": baseSymbol},
@@ -107,7 +107,7 @@ func UpdateArbitrageRelation() {
 			}
 
 			filterFinal := bson.M{
-				"exchange": "binance",
+				"exchange": "binance_v1",
 				"quote":    "USDT",
 				"base":     baseMediumSymbol,
 			}
@@ -120,7 +120,7 @@ func UpdateArbitrageRelation() {
 				}
 			}
 
-			resultMediums = append(resultMediums, resultMediumMap["symbol"])
+			resultMediums = append(resultMediums, bson.M{"symbol": resultMediumMap["symbol"], "base": resultMediumMap["base"], "quote": resultMediumMap["quote"]})
 		}
 
 		_, err = symbolCollection.UpdateByID(mongoDB.Ctx, result[0].Value, bson.D{
