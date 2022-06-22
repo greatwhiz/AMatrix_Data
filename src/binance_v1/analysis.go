@@ -31,7 +31,7 @@ func doAnalysis(symbol string, baseSymbol string, symbolJSON string, relation in
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
 
-	symbolCollection := mongoDB.GetCollection("symbols")
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
 	filter := bson.M{
 		"exchange": "binance",
 		"symbol":   relation,

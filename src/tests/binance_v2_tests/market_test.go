@@ -1,6 +1,9 @@
-package binance_v2
+package binance_v2_tests
 
-import "testing"
+import (
+	"A-Matrix/src/binance_v2"
+	"testing"
+)
 
 func TestSubscribeSymbols(t *testing.T) {
 	tests := []struct {
@@ -10,7 +13,7 @@ func TestSubscribeSymbols(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SubscribeSymbols()
+			binance_v2.SubscribeSymbols()
 		})
 	}
 }

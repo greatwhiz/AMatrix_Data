@@ -12,7 +12,7 @@ func SubscribeSymbols() {
 	var symbols []models.SymbolWithRelations
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
-	symbolCollection := mongoDB.GetCollection("symbols")
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
 	filter := bson.M{
 		"exchange": "binance",
 		"arbitrage": bson.M{
@@ -47,16 +47,20 @@ func SubscribeSymbols() {
 			}
 			symbolRelation.ArbitrageRelations = append(symbolRelation.ArbitrageRelations, models.ArbitrageRelation{
 				SymbolData: models.SymbolData{
-					BaseCoin:  gjson.Get(symbolArbitrageJSON, "base").Str,
-					QuoteCoin: gjson.Get(symbolArbitrageJSON, "quote").Str,
-					Symbol:    gjson.Get(symbolArbitrageJSON, "symbol").Str,
-					LotSize:   gjson.Get(symbolArbitrageJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float(),
+					SymbolBase: models.SymbolBase{
+						BaseCoin:  gjson.Get(symbolArbitrageJSON, "base").Str,
+						QuoteCoin: gjson.Get(symbolArbitrageJSON, "quote").Str,
+						Symbol:    gjson.Get(symbolArbitrageJSON, "symbol").Str,
+					},
+					LotSize: gjson.Get(symbolArbitrageJSON, "filters.#(filterType==\"LOT_SIZE\").minQty").Float(),
 				},
 				FinalSymbol: models.SymbolData{
-					BaseCoin:  finalSymbolBaseCoin,
-					QuoteCoin: fundamentalSymbol,
-					Symbol:    finalSymbolBaseCoin + fundamentalSymbol,
-					LotSize:   gjson.Get(symbolArbitrageJSON, "final_filters.#(filterType==\"LOT_SIZE\").minQty").Float(),
+					SymbolBase: models.SymbolBase{
+						BaseCoin:  finalSymbolBaseCoin,
+						QuoteCoin: fundamentalSymbol,
+						Symbol:    finalSymbolBaseCoin + fundamentalSymbol,
+					},
+					LotSize: gjson.Get(symbolArbitrageJSON, "final_filters.#(filterType==\"LOT_SIZE\").minQty").Float(),
 				},
 				IsBuyOrSell: isBuyOrSell,
 			})

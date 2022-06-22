@@ -1,18 +1,22 @@
 package binance_v1
 
-var websocketAddress, restAPIHost string
-var fundamentalSymbol string
-var AccountBalance map[string]float64
-var commissionRate float64
-var arbitrageThreshold, tradingAmountThreshold float64
-var blackList map[string]bool
-var apiKey string
-var secretKey string
-var leverage float64
-var tradeNumLimit, tradeCount, analyzingConcurrency int
+var (
+	websocketAddress, restAPIHost                   string
+	defaultCollection                               string
+	fundamentalSymbol                               string
+	AccountBalance                                  map[string]float64
+	commissionRate                                  float64
+	arbitrageThreshold, tradingAmountThreshold      float64
+	blackList                                       map[string]bool
+	apiKey                                          string
+	secretKey                                       string
+	leverage                                        float64
+	tradeNumLimit, tradeCount, analyzingConcurrency int
+)
 
 func init() {
 	websocketAddress = "stream.binance_v1.com:9443"
+	defaultCollection = "symbols_binance"
 	restAPIHost = "https://api.binance.com/api/v3"
 	fundamentalSymbol = "USDT"
 	AccountBalance = map[string]float64{}

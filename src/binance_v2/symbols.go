@@ -3,7 +3,6 @@ package binance_v2
 import (
 	"A-Matrix/src/db"
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,7 +13,12 @@ import (
 func UpdateSymbols() {
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
-	symbolCollection := mongoDB.GetCollection("symbols")
+	// clean database
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
+	if err := symbolCollection.Drop(mongoDB.Ctx); err != nil {
+		log.Fatal(err)
+	}
+	symbolCollection = mongoDB.GetCollection(defaultCollection) // automatically created database
 	content := GetAPI("exchangeInfo", nil)
 	symbols := gjson.Get(content, "symbols")
 	var symbolBSONs []interface{}
@@ -41,19 +45,19 @@ func UpdateSymbols() {
 	})
 
 	if len(symbolBSONs) > 0 {
-		results, err := symbolCollection.InsertMany(context.TODO(), symbolBSONs)
+		_, err := symbolCollection.InsertMany(context.TODO(), symbolBSONs)
 		// check for errors in the insertion
 		if err != nil {
 			panic(err)
 		}
 		// display the ids of the newly inserted objects
-		fmt.Println(results.InsertedIDs)
+		log.Println("Data Synchronized.")
 	}
 }
 
 func UpdateArbitrageRelation() {
 	mongoDB := db.GetMongoDB()
-	symbolCollection := mongoDB.GetCollection("symbols")
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
 
 	filter := bson.M{
 		"quote":    fundamentalSymbol,
@@ -88,7 +92,7 @@ func UpdateArbitrageRelation() {
 			},
 		}
 		mongoDB = db.GetMongoDB()
-		symbolCollection = mongoDB.GetCollection("symbols")
+		symbolCollection = mongoDB.GetCollection(defaultCollection)
 		curMedium, err := symbolCollection.Find(mongoDB.Ctx, filterMedium)
 		if err != nil {
 			log.Fatal(err)
@@ -125,7 +129,7 @@ func UpdateArbitrageRelation() {
 			var resultFinal bson.M
 			// check for errors in the finding
 			mongoDB = db.GetMongoDB()
-			symbolCollection = mongoDB.GetCollection("symbols")
+			symbolCollection = mongoDB.GetCollection(defaultCollection)
 			if err = symbolCollection.FindOne(mongoDB.Ctx, filterFinal).Decode(&resultFinal); err != nil {
 				mongoDB.Close()
 				if err == mongo.ErrNoDocuments {
@@ -136,7 +140,7 @@ func UpdateArbitrageRelation() {
 			resultMediums = append(resultMediums, bson.M{"symbol": resultMediumMap["symbol"], "base": resultMediumMap["base"], "quote": resultMediumMap["quote"], "buy_or_sell": isBuyOrSell, "filters": resultMediumMap["filters"], "final_filters": resultFinal["filters"]})
 		}
 		mongoDB = db.GetMongoDB()
-		symbolCollection = mongoDB.GetCollection("symbols")
+		symbolCollection = mongoDB.GetCollection(defaultCollection)
 		_, err = symbolCollection.UpdateByID(mongoDB.Ctx, resultMap["_id"], bson.D{
 			{"$set", bson.D{
 				{"arbitrage", resultMediums},
@@ -149,4 +153,5 @@ func UpdateArbitrageRelation() {
 			log.Fatal(err)
 		}
 	}
+	log.Println("Arbitrage Relationships Updated.")
 }

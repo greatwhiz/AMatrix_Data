@@ -63,7 +63,7 @@ func requestAPI(api string, action string, params map[string]string, isSign bool
 		log.Println(err, "Retry once.")
 		return requestAPI(api, action, params, isSign)
 	}
-
+	//println("used weight:", resp.Header["X-Mbx-Used-Weight-1m"][0])
 	return string(bodyBytes)
 }
 

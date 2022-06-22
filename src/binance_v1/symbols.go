@@ -14,7 +14,7 @@ import (
 func UpdateSymbols() {
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
-	symbolCollection := mongoDB.GetCollection("symbols")
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
 	content := GetAPI("exchangeInfo", nil)
 	symbols := gjson.Get(content, "symbols")
 	var symbolBSONs []interface{}
@@ -54,7 +54,7 @@ func UpdateSymbols() {
 func UpdateArbitrageRelation() {
 	mongoDB := db.GetMongoDB()
 	defer mongoDB.Close()
-	symbolCollection := mongoDB.GetCollection("symbols")
+	symbolCollection := mongoDB.GetCollection(defaultCollection)
 
 	filter := bson.M{
 		"quote":    fundamentalSymbol,

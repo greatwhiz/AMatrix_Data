@@ -1,4 +1,4 @@
-package binance_tests
+package binance_v1_tests
 
 import (
 	"A-Matrix/src/binance_v1"

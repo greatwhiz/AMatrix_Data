@@ -44,7 +44,7 @@ func SubscribeMarket() {
 		ticker := gjson.Parse(string(content)).Value().(map[string]interface{})
 		var resultBSON bson.D
 		mongoDB := db.GetMongoDB()
-		symbolCollection := mongoDB.GetCollection("symbols")
+		symbolCollection := mongoDB.GetCollection(defaultCollection)
 		err = symbolCollection.FindOneAndUpdate(mongoDB.Ctx, bson.M{"symbol": ticker["s"], "exchange": "binance_v1"}, bson.D{
 			{"$set", bson.D{
 				{"ticker", bson.D{

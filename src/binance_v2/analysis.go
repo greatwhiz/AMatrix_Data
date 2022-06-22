@@ -9,47 +9,73 @@ import (
 )
 
 func RunAnalysis(symbolWithRelations []models.SymbolWithRelations) {
-	for _, relations := range symbolWithRelations {
-		Analyze(relations)
+	//var i int
+	log.Println("Analysis started.")
+	for {
+		AnalyzeBatch(symbolWithRelations)
+		//i += 1
+		//println(i)
 	}
 }
 
-func Analyze(symbolRelation models.SymbolWithRelations) {
-	done := make(chan int, analyzingConcurrency)
-	for _, relation := range symbolRelation.ArbitrageRelations {
-		if blackList[relation.Symbol] {
-			continue
+func AnalyzeBatch(symbolWithRelations []models.SymbolWithRelations) {
+	books := GetAPI("ticker/bookTicker", nil)
+	booksArray := gjson.Parse(books).Array()
+	symbolTickers := make(map[string]models.SymbolTicker)
+	for _, book := range booksArray {
+		askPrice := gjson.Get(book.Raw, "askPrice").Float()
+		askQuantity := gjson.Get(book.Raw, "askQty").Float()
+		bidPrice := gjson.Get(book.Raw, "bidPrice").Float()
+		bidQuantity := gjson.Get(book.Raw, "bidQty").Float()
+
+		if askPrice != 0 && askQuantity != 0 && bidPrice != 0 && bidQuantity != 0 {
+			symbolTicker := models.SymbolTicker{
+				SymbolBase: models.SymbolBase{
+					Symbol:    gjson.Get(book.Raw, "symbol").Str,
+					BaseCoin:  gjson.Get(book.Raw, "base").Str,
+					QuoteCoin: gjson.Get(book.Raw, "quote").Str,
+				},
+				AskPrice:    askPrice,
+				AskQuantity: askQuantity,
+				BidPrice:    bidPrice,
+				BidQuantity: bidQuantity,
+			}
+			symbolTickers[symbolTicker.Symbol] = symbolTicker
 		}
-		done <- -1
-		go doAnalysis(symbolRelation, relation, done)
 	}
-	close(done)
+	for _, sr := range symbolWithRelations {
+		for _, relation := range sr.ArbitrageRelations {
+			go doAnalysis(sr, relation, symbolTickers)
+		}
+	}
 }
 
-func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.ArbitrageRelation, done chan int) {
+func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.ArbitrageRelation, symbolTickers map[string]models.SymbolTicker) {
 	//get base ask price
-	book := GetAPI("depth", map[string]string{"symbol": symbolRelation.Symbol, "limit": "1"})
-	askPrice := gjson.Get(book, "asks.0.0").Float()
-	baseAskQty := gjson.Get(book, "asks.0.1").Float()
-	var mediumPrice, mediumQty float64
-	mediumBook := GetAPI("depth", map[string]string{"symbol": relation.Symbol, "limit": "1"})
-	if relation.IsBuyOrSell {
-		mediumPrice = gjson.Get(mediumBook, "asks.0.0").Float()
-		mediumQty = gjson.Get(mediumBook, "asks.0.1").Float()
-	} else {
-		mediumPrice = gjson.Get(mediumBook, "bids.0.0").Float()
-		mediumQty = gjson.Get(mediumBook, "bids.0.1").Float()
-	}
+	book := symbolTickers[symbolRelation.Symbol]
+	mediumBook := symbolTickers[relation.Symbol]
+	finalBook := symbolTickers[relation.FinalSymbol.Symbol]
 
-	if mediumPrice == 0 {
-		log.Println(fmt.Sprintf("%s unable get book: %s", relation.Symbol, mediumBook))
-		<-done
+	if book.Symbol == "" || mediumBook.Symbol == "" || finalBook.Symbol == "" {
 		return
 	}
-	finalBook := GetAPI("depth", map[string]string{"symbol": relation.FinalSymbol.Symbol, "limit": "1"})
-	bidFinalPrice := gjson.Get(finalBook, "bids.0.0").Float()
-	bidFinalQty := gjson.Get(finalBook, "bids.0.1").Float()
+
+	askPrice := book.AskPrice
+	baseAskQty := book.AskQuantity
+
+	var mediumPrice, mediumQty float64
+	if relation.IsBuyOrSell {
+		mediumPrice = mediumBook.AskPrice
+		mediumQty = mediumBook.AskQuantity
+	} else {
+		mediumPrice = mediumBook.BidPrice
+		mediumQty = mediumBook.BidQuantity
+	}
+
+	bidFinalPrice := finalBook.BidPrice
+	bidFinalQty := finalBook.BidQuantity
 	estimatedAmount := calculate(askPrice, mediumPrice, bidFinalPrice, commissionRate, relation.IsBuyOrSell)
+
 	if estimatedAmount > arbitrageThreshold && estimatedAmount != math.Inf(0) {
 		if relation.IsBuyOrSell {
 			log.Println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) (%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, bidFinalPrice, estimatedAmount))
@@ -74,7 +100,6 @@ func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.Arbit
 		OrderFull(&orderRelation)
 		//log.Println(orderRelation)
 	}
-	<-done
 }
 
 func calculate(askPrice float64, mediumPrice float64, bidFinalPrice float64, commissionRate float64, mediumBuySell bool) (estimatedAmount float64) {
