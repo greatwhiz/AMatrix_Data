@@ -20,6 +20,7 @@ func OrderFull(orderRelation *models.OrderRelation) {
 	tradingAmount, baseQty := calculateOrderQuantity(orderRelation)
 	// skip when too small amount to trade
 	if tradingAmount < tradingAmountThreshold {
+		log.Println(fmt.Sprintf("Amount (%.4f) Not Greater than %.4f", tradingAmount, tradingAmountThreshold))
 		return
 	}
 	baseQty = getPreciseQuantity(baseQty, orderRelation.BaseLotSize)
