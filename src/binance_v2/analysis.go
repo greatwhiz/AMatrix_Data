@@ -78,9 +78,9 @@ func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.Arbit
 
 	if estimatedAmount > arbitrageThreshold && estimatedAmount != math.Inf(0) {
 		if relation.IsBuyOrSell {
-			log.Println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) (%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, bidFinalPrice, estimatedAmount))
+			log.Println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) %s(%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, relation.FinalSymbol.Symbol, bidFinalPrice, estimatedAmount))
 		} else {
-			log.Println(fmt.Sprintf("%s(%.8f) %s(Sell %.8f) (%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, bidFinalPrice, estimatedAmount))
+			log.Println(fmt.Sprintf("%s(%.8f) %s(Sell %.8f) %s(%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, relation.FinalSymbol.Symbol, bidFinalPrice, estimatedAmount))
 		}
 		orderRelation := models.OrderRelation{
 			BaseSymbol:     symbolRelation.Symbol,
