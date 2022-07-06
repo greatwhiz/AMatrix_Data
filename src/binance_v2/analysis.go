@@ -77,6 +77,7 @@ func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.Arbit
 	estimatedAmount := calculate(askPrice, mediumPrice, bidFinalPrice, commissionRate, relation.IsBuyOrSell)
 
 	if estimatedAmount > arbitrageThreshold && estimatedAmount != math.Inf(0) {
+		tradingChan <- -1
 		if relation.IsBuyOrSell {
 			log.Println(fmt.Sprintf("%s(%.8f) %s(Buy %.8f) %s(%.8f): %.4f", symbolRelation.Symbol, askPrice, relation.Symbol, mediumPrice, relation.FinalSymbol.Symbol, bidFinalPrice, estimatedAmount))
 		} else {
@@ -98,6 +99,7 @@ func doAnalysis(symbolRelation models.SymbolWithRelations, relation models.Arbit
 			FinalLotSize:   relation.FinalSymbol.LotSize,
 		}
 		OrderFull(&orderRelation)
+		<-tradingChan
 		//log.Println(orderRelation)
 	}
 }

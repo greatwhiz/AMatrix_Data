@@ -41,7 +41,7 @@ func OrderFull(orderRelation *models.OrderRelation) {
 	finalExecutedQty := marketOrder(orderRelation.FinalSymbol, "SELL", finalQty)
 	GetBalance(fundamentalSymbol)
 	endBalance := AccountBalance[fundamentalSymbol]
-	log.Println(fmt.Sprintf("Arbitrage completed: (%.4f) %.8f -> %.8f, %.2f", finalExecutedQty, startBalance, endBalance, endBalance/startBalance))
+	log.Println(fmt.Sprintf("Arbitrage Order: %s(%.4f), %s(%.4f), %s(%.4f) Final Executed: %.4f Result: %.8f -> %.8f, %.4f%%", orderRelation.BaseSymbol, baseQty, orderRelation.MediumRelation, mediumQty, orderRelation.FinalSymbol, finalQty, finalExecutedQty, startBalance, endBalance, endBalance/startBalance/100))
 	tradeCount += 1 // Count one trade
 }
 
